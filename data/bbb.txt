@@ -87,6 +87,6 @@ def example():
     doc_mgmt.update_documents()
     documents = doc_mgmt.get_documents()
     print(documents)
-    doc_mgmt.delete_file('data\\bbb.txt')
+    doc_mgmt.delete_file('data\\aaa.txt')
     
 example()
