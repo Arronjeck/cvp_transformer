@@ -1,5 +1,4 @@
 import os
-import time
 from datetime import datetime
 from tinydb import TinyDB, Query
 
@@ -88,6 +87,8 @@ def example():
     DOCMGTER.update_documents()
     documents = DOCMGTER.get_documents()
     print(documents)
-    DOCMGTER.delete_file('data\\bbb.txt')
+    documents = DOCMGTER.search_file('data\\消失的她.txt')
+    print(documents)
+    #DOCMGTER.delete_file('data\\bbb.txt')
     
 # example()

@@ -1,46 +1,65 @@
 import os
 import shutil
-from pathlib import Path
 import codecs
 import logging
+from pathlib import Path
+from typing import Dict, List, Optional
 
-from typing import Dict, Optional
+import pypdf
 
 import langchain.text_splitter
-import pypdf
-from langchain.document_loaders import TextLoader, NotebookLoader, UnstructuredMarkdownLoader, PyPDFLoader, \
-    UnstructuredImageLoader, UnstructuredPowerPointLoader, UnstructuredWordDocumentLoader
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.vectorstores import Chroma
+from langchain_community.document_loaders.text import TextLoader
+from langchain_community.document_loaders.notebook import NotebookLoader
+from langchain_community.document_loaders.markdown import UnstructuredMarkdownLoader
+from langchain_community.document_loaders.pdf import PyPDFLoader
+from langchain_community.document_loaders.image import UnstructuredImageLoader
+from langchain_community.document_loaders.powerpoint import UnstructuredPowerPointLoader
+from langchain_community.document_loaders.word_document import UnstructuredWordDocumentLoader
+from langchain_community.document_loaders.excel import UnstructuredExcelLoader
+from langchain_community.document_loaders.xml import UnstructuredXMLLoader
+from langchain_community.document_loaders.json_loader import JSONLoader
+from langchain_community.document_loaders.csv_loader import CSVLoader
+
+from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
+from langchain_community.vectorstores.chroma import Chroma
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
-
-def split_documents(documents, chunk_size=1000, chunk_overlap=0):
-    text_splitter = langchain.text_splitter.RecursiveCharacterTextSplitter(chunk_size=chunk_size,
-                                                                           chunk_overlap=chunk_overlap)
-    return text_splitter.split_documents(documents)
-
-
-def init_db(path: str,
-            persist_directory: str,
-            embedding: HuggingFaceEmbeddings = HuggingFaceEmbeddings()):
-    logging.info("Initializing database...")
-    db_local = Chroma(embedding_function=embedding, persist_directory=persist_directory)
-
-    file_types_loaders: Dict[str, type] = {
+class DocumentVectorStore:
+    def __init__(self, store_path:str='cache/vctordb', chunk_size: int = 1000, chunk_overlap: int = 200):
+        logging.info("Initializing VectorStore...")
+        self.store_path = store_path
+        self.chunk_size = chunk_size
+        self.chunk_overlap = chunk_overlap
+        self.embedding = HuggingFaceEmbeddings()
+        self.file_types_loaders: Dict[str, type] = {
         '.ipynb': NotebookLoader,
         '.md': UnstructuredMarkdownLoader,
         '.pdf': PyPDFLoader,
         '.txt': TextLoader,
         '.jpg': UnstructuredImageLoader,
         '.asciidoc': TextLoader,
-        '.pptx': UnstructuredPowerPointLoader,
+        '.pptx': UnstructuredPowerPointLoader,        
         '.docx': UnstructuredWordDocumentLoader,
-    }
-
-    def is_utf8(file_path: str) -> bool:
+        '.xlsx': UnstructuredExcelLoader,
+        '.xml': UnstructuredXMLLoader,
+        '.json': JSONLoader,
+        '.csv': CSVLoader,
+        }
+        
+        if self.load_db():
+            logging.info("VectorStore loaded successfully.")
+        else:
+            logging.info("VectorStore not found. Creating a new one...")
+            self.vector_store = Chroma(embedding_function=self.embedding, persist_directory=store_path)
+        
+    # 定义析构函数
+    def __del__(self):
+        self.vector_store.persist()
+        logging.info("VectorStore closed.")
+        
+    def __is_utf8__(file_path: str) -> bool:
         try:
             with codecs.open(file_path, encoding='utf-8', errors='strict') as f:
                 for _ in f:
@@ -48,85 +67,94 @@ def init_db(path: str,
             return True
         except UnicodeDecodeError:
             return False
+        
+    def __split_documents__(self, documents):
+        text_splitter = langchain.text_splitter.RecursiveCharacterTextSplitter(chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap)
+        return text_splitter.split_documents(documents)
 
-    def load_files(file_type: str, class_loader: type):
-        list_files_result = list_files(path, filetype=file_type)
-        logging.info(f"Found {len(list_files_result)} {file_type} files in {path}")
-
-        for file in list_files_result:
-
-            if file_type == '.txt':
-                if not is_utf8(file):
-                    logging.warning(f"Skipping non-UTF-8 file {file}")
-                    continue
-            if file_type == '.asciidoc':
-                if not is_utf8(file):
-                    logging.warning(f"Skipping non-UTF-8 file {file}")
-                    continue
-
-            if file_type == '.ipynb':
-                loader = class_loader(path=file, include_outputs=False, remove_newline=True)
-            elif file_type == '.txt':
-                loader = class_loader(file_path=file, encoding="utf-8")
-            elif file_type == '.asciidoc':
-                loader = class_loader(file_path=file, encoding="utf-8")
-            else:
-                loader = class_loader(file)
-
-            logging.info(f"Loading file {file}...")
-            documents = loader.load()
-            docs = split_documents(documents)
-            if len(docs) > 0:
-                db_local.add_documents(docs)
-
-    for filetype, loader_class in file_types_loaders.items():
-        load_files(filetype, loader_class)
-
-    logging.info("Database initialized successfully.")
-    return db_local
-
-
-def list_files(startpath, filetype: str = '.txt'):
-    txt_files = []
-    for root, dirs, files in os.walk(startpath):
-        for filename in files:
-            # Split filename into base name and extension
-            base_name, extension = os.path.splitext(filename)
-
-            if 'LICENSE' in base_name:
-                continue
-            if 'NOTICE' in base_name:
-                continue
-
-            # Check if extension matches
-            if extension == filetype:
-                # If it's a PDF file, check if it's encrypted
-                if filetype == '.pdf':
-                    file_path = os.path.join(root, filename)
-                    with open(file_path, 'rb') as f:
-                        pdf_reader = pypdf.PdfReader(f)
-                        if pdf_reader.is_encrypted:
-                            continue
-
-                txt_files.append(os.path.join(root, filename).replace('\\', '/'))
-    return txt_files
-
-
-def get_chroma_db(module_name: str,
-                  embedding: HuggingFaceEmbeddings = HuggingFaceEmbeddings(),
-                  reload: bool = False) -> Optional[Chroma]:
-    data_dir = Path("data") / module_name
-    db_dir = Path("db") / module_name
-
-    if db_dir.exists() and not reload:
-        logging.info(f"Module: {module_name} found, load data")
-        return Chroma(persist_directory=str(db_dir), embedding_function=embedding)
-    elif data_dir.exists() and (not db_dir.exists() or reload):
+    # 添加文件向量数据库
+    def add_document(self, file_path: str = "data\\aaa.txt"):
+        logging.info(f"Add file {file_path} to vector")
+        # Split filename into base name and extension
+        base_name, extension = os.path.splitext(file_path)
+        
+        # 判断 extension 是否在 file_types_loaders 的 key 中存在
+        doc_loader = self.file_types_loaders.get(extension)
+        if loader == None:
+            logging.warning(f"Not support file the type of {file_path}")
+            return
+        
+        # If it's a PDF file, check if it's encrypted
+        if extension == '.pdf':
+            with open(file_path, 'rb') as f:
+                pdf_reader = pypdf.PdfReader(f)
+                if pdf_reader.is_encrypted:
+                    logging.warning(f"The pdf file {file_path} has encrypted")
+                    return
+        elif extension == '.txt' or extension == '.asciidoc':
+            if not self.__is_utf8__(file_path):
+                logging.warning(f"Skipping non-UTF-8 file {file_path}")
+                return
+        
+        file_path.replace('\\', '/')
+        
+        if extension == '.ipynb':
+            loader = doc_loader(path=file_path, include_outputs=False, remove_newline=True)
+        elif extension == '.txt':
+            loader = doc_loader(file_path=file_path, encoding="utf-8")
+        elif extension == '.asciidoc':
+            loader = doc_loader(file_path=file_path, encoding="utf-8")
+        else:
+            loader = doc_loader(file_path)
+        
+        logging.info(f"Loading file {file_path}...")
+        documents = loader.load()
+        docs = self.__split_documents__(documents)
+        if len(docs) > 0:
+            self.vector_store.add_documents(docs)
+            logging.info(f"File {file_path} store to vector successfully.")
+            
+    # 查询文件向量数据库
+    def query_document(self, query: str):
+        logging.info(f"Query document with query: {query}")
+        results = self.vector_store.search(query, top_k=10)
+        logging.info(f"Query result: {results}")
+        
+    # 更新文件向量数据库
+    def update_document(self, file_path: str):
+        logging.info(f"Update file {file_path} in vector")
+        # Split filename into base name and extension
+        base_name, extension = os.path.splitext(file_path)
+        # 判断 extension 是否在 file_types_loaders 的 key 中存在
+        doc_loader = self.file_types_loaders.get(extension)
+        if doc_loader == None:
+            logging.warning(f"Not support file the type of {file_path}")
+            return
+        file_path.replace('\\', '/')
+        if extension == '.ipynb':
+            loader = doc_loader(path=file_path, include_outputs=False, remove_newline=True)
+        elif extension == '.txt' or extension == '.asciidoc':
+            loader = doc_loader(file_path=file_path, encoding="utf-8")
+        else:
+            loader = doc_loader(file_path)
+        logging.info(f"Loading file {file_path}...")
+        documents = loader.load()
+        docs = self.__split_documents__(documents)
+        if len(docs) > 0:
+            self.vector_store.update_documents(docs)
+            logging.info(f"File {file_path} update in vector successfully.")
+    
+    # 删除文件向量数据库
+    def delete_document(self, file_path: str):
+        logging.info(f"Delete file {file_path} from vector")
+        self.vector_store.delete(ids=[file_path])
+        logging.info(f"File {file_path} delete from vector successfully.")
+            
+    # 加载本地向量数据库
+    def load_db(self) -> bool:
+        db_dir = Path(self.store_path)        
         if db_dir.exists():
-            shutil.rmtree(db_dir)  # Use shutil.rmtree to remove the directory and its contents
-        db_dir.mkdir(parents=True, exist_ok=True)  # Create the db_dir if it doesn't exist
-        logging.info(f"Module: {module_name} found but not db, create index and load data")
-        return init_db(path=str(data_dir), persist_directory=str(db_dir))
-    else:
-        logging.error("module not exist")
-        return None
+            logging.info(f"Local vector db path {self.store_path} found, load data")
+            self.vector_store = Chroma(persist_directory=str(db_dir), embedding_function=self.embedding)
+            return True
+        return False
