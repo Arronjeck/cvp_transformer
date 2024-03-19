@@ -1,8 +1,9 @@
+import os
 import shutil
 from pathlib import Path
 import codecs
 import logging
-import os
+
 from typing import Dict, Optional
 
 import langchain.text_splitter

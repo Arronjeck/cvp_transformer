@@ -26,4 +26,4 @@ def sample_function():
     config['OpenAIModel']['OPENAI_API_KEY']='xxxxxxx'
     CONFIGER.save_config()
     
-sample_function()
+# sample_function()

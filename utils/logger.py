@@ -28,4 +28,4 @@ def example():
     LOGER.warning("This is a warning message.")
     LOGER.error("This is an error message.")
 
-example()
+# example()

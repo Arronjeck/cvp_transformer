@@ -81,12 +81,13 @@ class DocumentManagement:
     def close(self):
         self.db.close()
 
+DOCMGTER = DocumentManagement('data')
+
 # Example usage
 def example():
-    doc_mgmt = DocumentManagement('data')
-    doc_mgmt.update_documents()
-    documents = doc_mgmt.get_documents()
+    DOCMGTER.update_documents()
+    documents = DOCMGTER.get_documents()
     print(documents)
-    doc_mgmt.delete_file('data\\bbb.txt')
+    DOCMGTER.delete_file('data\\bbb.txt')
     
-example()
+# example()
