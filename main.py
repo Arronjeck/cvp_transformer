@@ -10,6 +10,7 @@ if __name__ == "__main__":
     cfg = CONFIGER.get_config()
     openkey = cfg["keys"]["OPENAI_API_KEY"]    
     LOGER.debug(openkey)
-
+    
+    
     #docc = DocumentCenter()
     #docc.upload_file('aaa.txt')
