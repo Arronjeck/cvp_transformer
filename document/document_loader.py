@@ -21,6 +21,7 @@ from langchain_community.document_loaders.json_loader import JSONLoader
 from langchain_community.document_loaders.csv_loader import CSVLoader
 
 from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings.openai import OpenAIEmbeddings
 from langchain_community.vectorstores.chroma import Chroma
 
 # Configure logging
@@ -32,7 +33,7 @@ class DocumentVectorStore:
         self.store_path = store_path
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
-        self.embedding = HuggingFaceEmbeddings()
+        self.embedding = OpenAIEmbeddings(openai_api_key=os.environ["OPENAI_API_KEY"])
         self.file_types_loaders: Dict[str, type] = {
         '.ipynb': NotebookLoader,
         '.md': UnstructuredMarkdownLoader,
@@ -80,7 +81,7 @@ class DocumentVectorStore:
         
         # 判断 extension 是否在 file_types_loaders 的 key 中存在
         doc_loader = self.file_types_loaders.get(extension)
-        if loader == None:
+        if doc_loader == None:
             logging.warning(f"Not support file the type of {file_path}")
             return
         
@@ -117,7 +118,7 @@ class DocumentVectorStore:
     # 查询文件向量数据库
     def query_document(self, query: str):
         logging.info(f"Query document with query: {query}")
-        results = self.vector_store.search(query, top_k=10)
+        results = self.vector_store.similarity_search(query, k=10)
         logging.info(f"Query result: {results}")
         return results
         
@@ -168,4 +169,4 @@ def sample():
     ret = local_db.query_document('who is xuan jie?')
     print(ret)
     
-sample()
+# sample()
