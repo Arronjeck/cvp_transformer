@@ -1,5 +1,5 @@
 import os
-import shutil
+import time
 from datetime import datetime
 from tinydb import TinyDB, Query
 
@@ -55,23 +55,7 @@ class DocumentManagement:
                 self.db.update({
                     'history': doc['history'][-10:]
                 }, self.query.path == doc['path'])
-    
-    def add_document(self, file_path:str )->bool:
-        # 从file_path中获取文件名
-        file_name = os.path.basename(file_path)
-        file_info = os.stat(file_path)
         
-        data_path = os.path.join(self.directory, file_name)
-        document = self.db.search(self.query.path == data_path)
-        if document is not None:
-            if  not document[0]['exist'] or file_info.st_mtime != document[0]['mtime'] or file_info.st_size != document[0]['size']:
-                # 拷贝文件 从 file_path 拷贝到 data_path
-                shutil.copyfile(file_path, data_path)
-                self.update_documents()
-                return True
-            else:
-                return True        
-        return False
     
     # 定义文件更新历史记录函数
     def update_history(self, file_path, action):
@@ -97,16 +81,12 @@ class DocumentManagement:
     def close(self):
         self.db.close()
 
-DOCMGTER = DocumentManagement('data')
-
 # Example usage
 def example():
-    DOCMGTER.update_documents()
-    documents = DOCMGTER.get_documents()
+    doc_mgmt = DocumentManagement('data')
+    doc_mgmt.update_documents()
+    documents = doc_mgmt.get_documents()
     print(documents)
-    documents = DOCMGTER.search_file('data\\消失的她.txt')
-    print(documents)
-    print(DOCMGTER.add_document('aaa.txt'))
-    #DOCMGTER.delete_file('data\\bbb.txt')
+    doc_mgmt.delete_file('data\\aaa.txt')
     
-#example()
+example()

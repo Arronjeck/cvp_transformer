@@ -28,7 +28,7 @@ from langchain_community.vectorstores.chroma import Chroma
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
 class DocumentVectorStore:
-    def __init__(self, store_path:str='cache/vctordb', chunk_size: int = 1000, chunk_overlap: int = 200):
+    def __init__(self, store_path:str='vctordb', chunk_size: int = 1000, chunk_overlap: int = 200):
         logging.info("Initializing VectorStore...")
         self.store_path = store_path
         self.chunk_size = chunk_size
@@ -161,12 +161,16 @@ class DocumentVectorStore:
             return True
         return False
     
+    def get_retriever(self) -> any:
+        return self.vector_store.as_retriever()
+    
+DOCVECTOR = DocumentVectorStore(store_path='cache/vctordb')
     
 # 使用DocumentVectorStore的样例
 def sample():
-    local_db = DocumentVectorStore()
-    local_db.add_document('data\\本地知识库.pdf')
-    ret = local_db.query_document('who is xuan jie?')
+    DOCVECTOR.get_retriever()
+    DOCVECTOR.add_document('data\\本地知识库.pdf')
+    ret = DOCVECTOR.query_document('who is xuan jie?')
     print(ret)
     
 # sample()

@@ -2,3 +2,4 @@
 # from .knowledge_base import KnowledgeBase
 from .document_db import DocumentManagement, DOCMGTER
 from .document_loader import DocumentVectorStore
+from .document_center import DocumentCenter
