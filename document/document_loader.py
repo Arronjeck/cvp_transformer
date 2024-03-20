@@ -119,6 +119,7 @@ class DocumentVectorStore:
         logging.info(f"Query document with query: {query}")
         results = self.vector_store.search(query, top_k=10)
         logging.info(f"Query result: {results}")
+        return results
         
     # 更新文件向量数据库
     def update_document(self, file_path: str):
@@ -158,3 +159,13 @@ class DocumentVectorStore:
             self.vector_store = Chroma(persist_directory=str(db_dir), embedding_function=self.embedding)
             return True
         return False
+    
+    
+# 使用DocumentVectorStore的样例
+def sample():
+    local_db = DocumentVectorStore()
+    local_db.add_document('data\\本地知识库.pdf')
+    ret = local_db.query_document('who is xuan jie?')
+    print(ret)
+    
+sample()
