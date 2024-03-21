@@ -1,7 +1,8 @@
 import os
-import shutil
 from datetime import datetime
 from tinydb import TinyDB, Query
+
+from .document_loader import DOCVECTOR
 
 class DocumentManagement:
     def __init__(self, directory:str, db_path='cache/documents.json'):
@@ -56,22 +57,34 @@ class DocumentManagement:
                     'history': doc['history'][-10:]
                 }, self.query.path == doc['path'])
     
+    # 添加文件（1 添加的文件数据库中存在，但文件不在，更新文件DB，看文件是否变化。2 添加的文件数据库中存在，但文件在，更新文件DB，看文件是否变化。3 添加的文件数据库中不存在，全新添加。）
     def add_document(self, file_path:str )->bool:
-        # 从file_path中获取文件名
-        file_name = os.path.basename(file_path)
-        file_info = os.stat(file_path)
-        
-        data_path = os.path.join(self.directory, file_name)
-        document = self.db.search(self.query.path == data_path)
-        if document is not None:
-            if  not document[0]['exist'] or file_info.st_mtime != document[0]['mtime'] or file_info.st_size != document[0]['size']:
-                # 拷贝文件 从 file_path 拷贝到 data_path
-                shutil.copyfile(file_path, data_path)
-                self.update_documents()
-                return True
-            else:
-                return True        
-        return False
+        file_path.replace('/', '\\')
+        file_info = os.stat(file_path)        
+        document = self.db.search(self.query.path == file_path)
+        # 判断 document 是否查询到
+        if len(document) > 0:     
+            # 1 添加的文件数据库中存在，但文件不在，如果文件没有变化，说明已经添加过相同文件，不需要再向量化文件到向量数据库，如果有变化，则添加到向量数据库
+            if file_info.st_size != document[0]['size']: # 判断是否已经上传过类似的文件，可以用MD5替换st_size  
+                DOCVECTOR.add_document(file_path)
+            # 更新文件DB
+            self.db.update({
+                        'size': file_info.st_size,
+                        'mtime': file_info.st_mtime,
+                        'exist': True,
+                        'history': self.db.get(self.query.path == file_path)['history'] + [{'action': 'readd', 'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]
+                    }, self.query.path == file_path)
+        else:
+            # 3 添加的文件数据库中不存在，全新添加
+            DOCVECTOR.add_document(file_path)
+            self.db.insert({
+                        'path': file_path,
+                        'size': file_info.st_size,
+                        'mtime': file_info.st_mtime,
+                        'exist': True,
+                        'history': [{'action': 'add','timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]                        
+                    })
+        return True
     
     # 定义文件更新历史记录函数
     def update_history(self, file_path, action):
@@ -99,14 +112,4 @@ class DocumentManagement:
 
 DOCMGTER = DocumentManagement('data')
 
-# Example usage
-def example():
-    DOCMGTER.update_documents()
-    documents = DOCMGTER.get_documents()
-    print(documents)
-    documents = DOCMGTER.search_file('data\\消失的她.txt')
-    print(documents)
-    print(DOCMGTER.add_document('aaa.txt'))
-    #DOCMGTER.delete_file('data\\bbb.txt')
-    
-#example()
+

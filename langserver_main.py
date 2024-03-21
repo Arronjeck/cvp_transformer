@@ -1,15 +1,14 @@
 # import OS
 import os
 #from knowledge import DocumentCenter
+from document.document_center import doc_example
 from utils import LOGER, CONFIGER
-
+import document
 
 
 # 判断main函数，打印 输出helloworld
 if __name__ == "__main__":
-    cfg = CONFIGER.get_config()
-    openkey = cfg["keys"]["OPENAI_API_KEY"]    
-    LOGER.debug(openkey)
+    doc_example()
     
     
     #docc = DocumentCenter()

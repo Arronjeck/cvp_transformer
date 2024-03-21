@@ -1,0 +1,105 @@
+import time
+import requests
+import logging
+import streamlit as st
+
+from document import DOCMGTER
+
+# AI template
+bot_div_format = '''
+<div class="chat-message bot">
+    <div class="avatar">
+        <img src="https://t4.ftcdn.net/jpg/02/10/96/95/360_F_210969565_cIHkcrIzRpWNZzq8eaQnYotG4pkHh0P9.jpg" style="max-height: 78px; max-width: 78px; border-radius: 50%; object-fit: cover;">
+    </div>
+    <div class="message">{{MSG}}</div>
+</div>
+'''
+
+# 用户template
+user_div_format = '''
+<div class="chat-message user">
+    <div class="avatar">
+        <img src="https://i.pinimg.com/474x/be/3b/9b/be3b9b983cfea7c8aa64706203174fcf.jpg" style="max-height: 78px; max-width: 78px; border-radius: 50%; object-fit: cover;">
+    </div>    
+    <div class="message">{{MSG}}</div>
+</div>
+'''
+
+def app():
+    # 初始化    
+    st.set_page_config(page_title="企业级通用知识库", page_icon=":robot:")    
+    st.header("企业级通用知识库")
+    
+    # session_state是Streamlit提供的用于存储会话状态的功能
+    if "conversation" not in st.session_state:
+        st.session_state.conversation = None
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = None
+    
+    # 文件上传sidebar模块
+    with st.sidebar:
+        # 2. 设置子标题
+        st.subheader("知识库管理")
+        st.write("Upload a file to search for keywords.")
+        # 3. 上传文档
+        upfile = st.file_uploader("Choose a file", type=["txt", "pdf", "ipynb", "asciidoc"] ,
+                                 accept_multiple_files=False)
+        # 打印upfiles中的文件详细信息
+        if upfile is not None:
+            st.write("File Name:", upfile.name)
+            st.write("File Type:", upfile.type)
+            st.write("File Size:", upfile.size, "bytes")                
+            if st.button("提交"):
+                with st.spinner("请等待，处理中..."):
+                    # 把 upfile 写到 data 目录下
+                    file_path = f"data/{upfile.name}"
+                    with open(file_path, "wb") as f:
+                        f.write(upfile.getbuffer())
+                    st.success("上传成功！")
+                    DOCMGTER.add_document(file_path)
+                    st.success("解析成功！")
+                    return
+                    # 调用https上传文件
+                    response = requests.post(f"http://127.0.0.1:8501/upload?file_name={upfile.name}&file_type={upfile.type}&file_size={upfile.size}")
+                    
+                    # 调用https GET方法
+                    response = requests.get(f"http://127.0.0.1:8501/search?query={user_input}")
+                    st.write(response.text)
+                    
+                    # 4. 获取文档内容（文本）
+                    # texts = extract_text_from_PDF(files)
+                    # 5. 将获取到的文档内容进行切分
+                    # content_chunks = split_content_into_chunks(texts)
+                    # 6. 向量化并且存储数据
+                    # embedding_model = get_openaiEmbedding_model()
+                    # vector_store = save_chunks_into_vectorstore(content_chunks, embedding_model)
+                    # 7. 创建对话chain
+                    # st.session_state.conversation = get_chat_chain(vector_store)
+                    pass
+    
+    # 基于知识库聊天模块
+    user_input = st.text_input("请输入你的提问: ")
+    # 处理用户输入，并返回响应结果
+    if user_input:
+        if st.session_state.conversation is not None:
+            # 调用函数st.session_state.conversation，并把用户输入的内容作为一个问题传入，返回响应。
+            logging.info(f'用户输入问题：{user_input}')
+            # 改成调用 API
+            response = st.session_state.conversation({'question': user_input})
+            # session状态是Streamlit中的一个特性，允许在用户的多个请求之间保存数据。
+            st.session_state.chat_history = response['chat_history']
+            # 显示聊天记录
+            # chat_history : 一个包含之前聊天记录的列表(一问一答的机制，所以单数是机器回答，双数是用户输入的问题)
+            for i, message in enumerate(st.session_state.chat_history):
+                if i % 2 == 0:
+                    st.write(user_div_format.replace("{{MSG}}", message.content), unsafe_allow_html=True) # unsafe_allow_html=True表示允许HTML内容被渲染
+                else:
+                    st.write(bot_div_format.replace("{{MSG}}", message.content), unsafe_allow_html=True)
+            pass
+        else:            
+            st.write(user_input)
+    
+    
+        
+if __name__ == "__main__":
+    app()
