@@ -60,7 +60,7 @@ class DocumentVectorStore:
         self.vector_store.persist()
         logging.info("VectorStore closed.")
         
-    def __is_utf8__(file_path: str) -> bool:
+    def __is_utf8__(self,file_path: str) -> bool:
         try:
             with codecs.open(file_path, encoding='utf-8', errors='strict') as f:
                 for _ in f:
@@ -93,7 +93,7 @@ class DocumentVectorStore:
                     logging.warning(f"The pdf file {file_path} has encrypted")
                     return
         elif extension == '.txt' or extension == '.asciidoc':
-            if not self.__is_utf8__(file_path):
+            if self.__is_utf8__(file_path):
                 logging.warning(f"Skipping non-UTF-8 file {file_path}")
                 return
         
