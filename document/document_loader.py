@@ -23,6 +23,7 @@ from langchain_community.document_loaders.csv_loader import CSVLoader
 from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain_community.embeddings.openai import OpenAIEmbeddings
 from langchain_community.vectorstores.chroma import Chroma
+from langchain_core.vectorstores import VectorStoreRetriever
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
@@ -161,7 +162,7 @@ class DocumentVectorStore:
             return True
         return False
     
-    def get_retriever(self) -> any:
+    def get_retriever(self) -> VectorStoreRetriever:
         return self.vector_store.as_retriever()
     
 DOCVECTOR = DocumentVectorStore(store_path='cache/vctordb')

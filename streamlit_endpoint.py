@@ -3,7 +3,9 @@ import requests
 import logging
 import streamlit as st
 
-from document import DOCMGTER
+from chat.chat_model import get_chat_chain
+from document import DOCMGTER,DOCVECTOR
+
 
 # AI template
 bot_div_format = '''
@@ -32,7 +34,7 @@ def app():
     
     # session_state是Streamlit提供的用于存储会话状态的功能
     if "conversation" not in st.session_state:
-        st.session_state.conversation = None
+        st.session_state.conversation = get_chat_chain(DOCVECTOR.get_retriever())
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = None
     
@@ -65,17 +67,6 @@ def app():
                     # 调用https GET方法
                     response = requests.get(f"http://127.0.0.1:8501/search?query={user_input}")
                     st.write(response.text)
-                    
-                    # 4. 获取文档内容（文本）
-                    # texts = extract_text_from_PDF(files)
-                    # 5. 将获取到的文档内容进行切分
-                    # content_chunks = split_content_into_chunks(texts)
-                    # 6. 向量化并且存储数据
-                    # embedding_model = get_openaiEmbedding_model()
-                    # vector_store = save_chunks_into_vectorstore(content_chunks, embedding_model)
-                    # 7. 创建对话chain
-                    # st.session_state.conversation = get_chat_chain(vector_store)
-                    pass
     
     # 基于知识库聊天模块
     user_input = st.text_input("请输入你的提问: ")
@@ -95,7 +86,6 @@ def app():
                     st.write(user_div_format.replace("{{MSG}}", message.content), unsafe_allow_html=True) # unsafe_allow_html=True表示允许HTML内容被渲染
                 else:
                     st.write(bot_div_format.replace("{{MSG}}", message.content), unsafe_allow_html=True)
-            pass
         else:            
             st.write(user_input)
     
