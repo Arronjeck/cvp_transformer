@@ -4,6 +4,7 @@ import os
 from typing import List
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
+from chat.chat_model import get_chat_chain
 from langserve import add_routes
 
 UPLOAD_STORE_DIR="data"
@@ -15,6 +16,7 @@ app = FastAPI(
   description="A simple api server using Langchain's Runnable interfaces",
 )
 
+## 接口1
 @app.post('/uploadfile/')
 async def upload_file(upfiles: List[UploadFile] = File(...)):
     try:
@@ -36,11 +38,11 @@ async def upload_file(upfiles: List[UploadFile] = File(...)):
         return JSONResponse({'status': 'error', 'message': 'Failed to upload file.'}, status=500)
 
 ## 接口2
-#add_routes( 
-#           app, 
-#           prompt | model,
-#           path="/chatwithvector"
-#)
+add_routes( 
+           app, 
+           get_chat_chain(),
+           path="/chatwithvector"
+)
 
 if __name__ == "__main__":
     import uvicorn

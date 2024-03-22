@@ -40,6 +40,15 @@ def fastAPI_upload(upfile:UploadedFile):
     response = requests.post(url, files=files)
     return response.json()
 
+def python_conversation(msg:str):
+    chbot = get_chat_chain(DOCVECTOR.get_retriever())
+    return chbot(msg)
+
+def fastAPI_conversation(msg:str):
+    url = "http://127.0.0.1:1233/chatwithvector"  
+    response = requests.post(url, json=msg)
+    return response.json()
+
 def app():
     # 初始化    
     st.set_page_config(page_title="企业级通用知识库", page_icon=":robot:")    
@@ -78,7 +87,9 @@ def app():
             # 调用函数st.session_state.conversation，并把用户输入的内容作为一个问题传入，返回响应。
             logging.info(f'用户输入问题：{user_input}')
             # 改成调用 API
-            response = st.session_state.conversation({'question': user_input})
+            response = python_conversation({'question': user_input})
+            response = fastAPI_conversation({'question': user_input})
+            # response = st.session_state.conversation({'question': user_input})
             # session状态是Streamlit中的一个特性，允许在用户的多个请求之间保存数据。
             st.session_state.chat_history = response['chat_history']
             # 显示聊天记录
