@@ -86,8 +86,9 @@ def app():
         if st.session_state.conversation is not None:
             # 调用函数st.session_state.conversation，并把用户输入的内容作为一个问题传入，返回响应。
             logging.info(f'用户输入问题：{user_input}')
+            # 直接调用python
+            # response = python_conversation({'question': user_input})
             # 改成调用 API
-            response = python_conversation({'question': user_input})
             response = fastAPI_conversation({'question': user_input})
             # response = st.session_state.conversation({'question': user_input})
             # session状态是Streamlit中的一个特性，允许在用户的多个请求之间保存数据。
