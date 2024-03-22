@@ -7,6 +7,8 @@ from fastapi.responses import JSONResponse
 from chat.chat_model import get_chat_chain
 from langserve import add_routes
 
+from document import DOCMGTER,DOCVECTOR
+
 UPLOAD_STORE_DIR="data"
 
 ##FastAPI是一个基于Python的Web框架，用于构建高性能、可扩展的API。它提供了一种简单、直观的方式来定义API端点，以及处理HTTP请求和响应。
@@ -40,7 +42,7 @@ async def upload_file(upfiles: List[UploadFile] = File(...)):
 ## 接口2
 add_routes( 
            app, 
-           get_chat_chain(),
+           get_chat_chain(DOCVECTOR.get_retriever()),
            path="/chatwithvector"
 )
 
