@@ -1,10 +1,7 @@
-import time
-from fastapi import File
 import requests
-from requests_toolbelt import MultipartEncoder
 import logging
 import streamlit as st
-
+from streamlit.runtime.uploaded_file_manager import UploadedFile
 from chat.chat_model import get_chat_chain
 from document import DOCMGTER,DOCVECTOR
 
@@ -29,24 +26,19 @@ user_div_format = '''
 </div>
 '''
 
-def python_upload(file_name:str,file_buffer:memoryview):
+def python_upload(upfile:UploadedFile):
     # 把 upfile 写到 data 目录下
-    file_path = f"data/{file_name}"
+    file_path = f"data/{upfile.name}"
     with open(file_path, "wb") as f:
-        f.write(file_buffer)
-    st.success("上传成功！")
+        f.write(upfile.getbuffer())
     DOCMGTER.add_document(file_path)
-    st.success("解析成功！")
+    return "上传和解析成功！"
 
-def fastAPI_upload(file_name:str,file_buffer:bytes):
-    # 创建 MultipartEncoder 对象，将文件名和文件内容作为字段添加
-    multipart_encoder = MultipartEncoder(  
-        fields={'file': (file_name, file_buffer, 'application/octet-stream')}  
-    )
-    # 设置请求头，包含边界信息  
-    headers = {'Content-Type': multipart_encoder.content_type}    
-    response = requests.post("http://127.0.0.1:9091/uploadfile", headers=headers, files=multipart_encoder)
-    st.write(response.text)
+def fastAPI_upload(upfile:UploadedFile):
+    url = "http://127.0.0.1:1233/uploadfile"
+    files = {'upfiles': (upfile.name,upfile.read())}   
+    response = requests.post(url, files=files)
+    return response.json()
 
 def app():
     # 初始化    
@@ -74,8 +66,9 @@ def app():
             st.write("File Size:", upfile.size, "bytes")                
             if st.button("提交"):
                 with st.spinner("请等待，处理中..."):
-                    #python_upload(upfile.name,upfile.getbuffer())
-                    fastAPI_upload(upfile.name,upfile.read())
+                    #python_upload(upfile)
+                    resp = fastAPI_upload(upfile)
+                    st.write(resp)
     
     # 基于知识库聊天模块
     user_input = st.text_input("请输入你的提问: ")
