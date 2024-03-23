@@ -3,7 +3,7 @@ import logging
 import streamlit as st
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 from chat.chat_model import get_chat_chain
-from document import DOCMGTER,DOCVECTOR
+#from document import DOCMGTER,DOCVECTOR
 
 
 # AI template
@@ -41,12 +41,12 @@ def fastAPI_upload(upfile:UploadedFile):
     return response.json()
 
 def python_conversation(input:str):
-    msg={'question': input}
+    msg={'question': f'{input}'}
     chbot = get_chat_chain(DOCVECTOR.get_retriever())
     return chbot(msg)
 
 def fastAPI_conversation(input:str):
-    msg={'input': {'question': input}}
+    msg={'input': {'question': f'{input}'}}
     url = "http://127.0.0.1:1233/chatwithvector/invoke/"
     response = requests.post(url, json=msg)
     return response.json()
@@ -58,7 +58,7 @@ def app():
     
     # session_state是Streamlit提供的用于存储会话状态的功能
     if "conversation" not in st.session_state:
-        st.session_state.conversation = get_chat_chain(DOCVECTOR.get_retriever())
+        st.session_state.conversation = None #get_chat_chain(DOCVECTOR.get_retriever())
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = None
     
@@ -85,27 +85,26 @@ def app():
     user_input = st.text_input("请输入你的提问: ")
     # 处理用户输入，并返回响应结果
     if user_input:
-        if st.session_state.conversation is not None:
-            # 调用函数st.session_state.conversation，并把用户输入的内容作为一个问题传入，返回响应。
-            logging.info(f'用户输入问题：{user_input}')
-            # 直接调用python
-            # response = python_conversation({'question': user_input})
-            # 改成调用 API
+        logging.info(f'用户输入问题：{user_input}')
+        
+        if st.session_state.conversation is None:
+            # 调用 API
             response = fastAPI_conversation(user_input)
-            # response = st.session_state.conversation({'question': user_input})
+            st.session_state.chat_history = response['output']['chat_history']
+        else:
+            # 调用函数st.session_state.conversation，并把用户输入的内容作为一个问题传入，返回响应。
+            # 直接调用python
+            response = python_conversation({'question': user_input})
             # session状态是Streamlit中的一个特性，允许在用户的多个请求之间保存数据。
             st.session_state.chat_history = response['chat_history']
-            # 显示聊天记录
-            # chat_history : 一个包含之前聊天记录的列表(一问一答的机制，所以单数是机器回答，双数是用户输入的问题)
-            for i, message in enumerate(st.session_state.chat_history):
-                if i % 2 == 0:
-                    st.write(user_div_format.replace("{{MSG}}", message.content), unsafe_allow_html=True) # unsafe_allow_html=True表示允许HTML内容被渲染
-                else:
-                    st.write(bot_div_format.replace("{{MSG}}", message.content), unsafe_allow_html=True)
-        else:            
-            st.write(user_input)
-    
-    
+        # 显示聊天记录
+        # chat_history : 一个包含之前聊天记录的列表(一问一答的机制，所以单数是机器回答，双数是用户输入的问题)
+        for i, message in enumerate(st.session_state.chat_history):
+            if i % 2 == 0:
+                st.write(user_div_format.replace("{{MSG}}", message['content']), unsafe_allow_html=True) # unsafe_allow_html=True表示允许HTML内容被渲染
+            else:
+                st.write(bot_div_format.replace("{{MSG}}", message['content']), unsafe_allow_html=True)
+
         
 if __name__ == "__main__":
     app()

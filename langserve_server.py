@@ -6,6 +6,7 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
 from chat.chat_model import get_chat_chain
 from langserve import add_routes
+from langchain.schema.runnable import RunnableMap, RunnableLambda, RunnablePassthrough
 
 from document import DOCMGTER,DOCVECTOR
 
@@ -39,10 +40,14 @@ async def upload_file(upfiles: List[UploadFile] = File(...)):
         # 返回失败响应
         return JSONResponse({'status': 'error', 'message': 'Failed to upload file.'}, status=500)
 
+cvp_chain = get_chat_chain(DOCVECTOR.get_retriever())
+
+wrapped_chain = RunnableLambda(cvp_chain)
+
 ## 接口2
 add_routes( 
            app, 
-           get_chat_chain(DOCVECTOR.get_retriever()),
+           wrapped_chain,
            path="/chatwithvector"
 )
 
