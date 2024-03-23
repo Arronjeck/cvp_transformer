@@ -33,7 +33,9 @@ async def upload_file(upfiles: List[UploadFile] = File(...)):
             
             with open(file_path, "wb") as f:
                 content = await ufile.read()
-                f.write(content)
+                f.write(content)                
+            if not DOCMGTER.add_document(file_path):
+                return JSONResponse({'status': 'error', 'message': 'Failed to tranform file.'}, status=502)
         # 返回成功响应
         return JSONResponse({'status': 'success', 'message': 'File uploaded successfully.'})
     except Exception as e:
