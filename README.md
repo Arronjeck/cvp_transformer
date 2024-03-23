@@ -1,5 +1,8 @@
 # cvp_transformer
 
+# 什么是CVP架构
+ChatGPT + VectorDB + Prompt 架构模式（RAG）
+
 # 启动服务
 python langserve_server.py
 
