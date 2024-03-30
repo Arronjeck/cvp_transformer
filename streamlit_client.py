@@ -35,7 +35,7 @@ def python_upload(upfile:UploadedFile):
     return "上传和解析成功！"
 
 def fastAPI_upload(upfile:UploadedFile):
-    url = "http://127.0.0.1:1233/uploadfile"
+    url = "http://127.0.0.1:6006/uploadfile"
     files = {'upfiles': (upfile.name,upfile.read())}   
     response = requests.post(url, files=files)
     return response.json()
@@ -47,7 +47,7 @@ def python_conversation(input:str):
 
 def fastAPI_conversation(input:str):
     msg={'input': {'question': f'{input}'}}
-    url = "http://127.0.0.1:1233/chatwithvector/invoke/"
+    url = "http://127.0.0.1:6006/chatwithvector/invoke/"
     response = requests.post(url, json=msg)
     return response.json()
 
@@ -91,6 +91,7 @@ def app():
             # 调用 API
             response = fastAPI_conversation(user_input)
             st.session_state.chat_history = response['output']['chat_history']
+            # st.write(st.session_state.chat_history)
         else:
             # 调用函数st.session_state.conversation，并把用户输入的内容作为一个问题传入，返回响应。
             # 直接调用python

@@ -22,9 +22,9 @@ class ChatGLM36B(LLM):
     model_name: object = None
     model_config: object = None
     
-    @property
-    def _identifying_params(self) -> Dict[str, Any]:
-        return {**super()._identifying_params, "model_name": self.model_name}
+    #@property
+    #def _identifying_params(self) -> Dict[str, Any]:
+    #    return {**super()._identifying_params, "model_name": self.model_name}
     
     def __init__(self, model_name):        
         super().__init__()
@@ -38,14 +38,14 @@ class ChatGLM36B(LLM):
             trust_remote_code=True
         )
         self.model = AutoModel.from_pretrained(
-            model_name, config=self.model_config, trust_remote_code=True, device_map="auto"
-        ).cuda().eval()
+            model_name, config=self.model_config, trust_remote_code=True, device="cuda"
+        ).cuda()
         
     @property
     def _llm_type(self) -> str:
         return "chat_glm_3"
     
-    def tool_config_from_file(tool_name, directory="/root/knowledge_base_v2/models/Tool"):
+    def tool_config_from_file(self, tool_name, directory="cache/Tool"):
         """search tool yaml and return json format"""
         for filename in os.listdir(directory):
             if filename.endswith('.yaml') and tool_name in filename:
