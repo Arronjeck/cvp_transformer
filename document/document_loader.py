@@ -34,7 +34,11 @@ class DocumentVectorStore:
         self.store_path = store_path
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
-        self.embedding = OpenAIEmbeddings(openai_api_key=os.environ["OPENAI_API_KEY"])
+        #self.embedding = OpenAIEmbeddings(openai_api_key=os.environ["OPENAI_API_KEY"])
+        self.embedding = HuggingFaceEmbeddings(
+            model_name="/root/autodl-tmp/embedding/text2vec-base-chinese", 
+            model_kwargs={"device": "cuda:0"},
+            encode_kwargs={"normalize_embeddings": False})
         self.file_types_loaders: Dict[str, type] = {
         '.ipynb': NotebookLoader,
         '.md': UnstructuredMarkdownLoader,
